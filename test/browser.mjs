@@ -40,7 +40,7 @@ async function screenshot(page,file){
 }
 
 async function checkSort(desktop,mobile){
-  const {levels,newRun,solve,dailyLevel,actions,step}=await import('../game/model.mjs');
+  const {levels,training,newRun,solve,dailyLevel,actions,step}=await import('../game/model.mjs');
   const execute=async (page,path)=>{
     for(const a of path){
       if(a.kind==='park'){await page.locator('#park').click();continue}
@@ -48,6 +48,34 @@ async function checkSort(desktop,mobile){
       await page.locator('#send'+a.lane).click();
     }
   }
+  await desktop.locator('#training').click();
+  assert.equal(await desktop.locator('#training').getAttribute('aria-pressed'),'true');
+  assert.equal(await desktop.locator('#slots').textContent(),'0 / 1');
+  await desktop.locator('#send1').click();
+  await desktop.locator('#park').click();
+  assert.match(await desktop.locator('#status').textContent(),/Буфер полон/);
+  assert.equal(await desktop.locator('#slots').textContent(),'1 / 1');
+  await desktop.locator('#reset').click();
+  assert.equal(await desktop.locator('#slots').textContent(),'0 / 1');
+  const start=newRun(training);
+  const first=actions(training,start).find(a=>a.from==='front'&&a.lane===0);
+  await execute(desktop,[first,...solve(training,step(training,start,first))]);
+  assert.match(await desktop.locator('#status').textContent(),/Оба заказа собраны/);
+  await desktop.locator('#next').click();
+  assert.equal(await desktop.locator('#slots').textContent(),'0 / 1');
+  await desktop.locator('#campaign').click();
+  assert.equal(await desktop.locator('#slots').textContent(),'0 / 3');
+  assert.match(await desktop.locator('#stage').textContent(),/01/);
+  await mobile.locator('#training').tap();
+  assert.equal(await mobile.locator('#slots').textContent(),'0 / 1');
+  await mobile.locator('#send1').tap();
+  await mobile.locator('#park').tap();
+  assert.match(await mobile.locator('#status').textContent(),/Буфер полон/);
+  await mobile.locator('#reset').tap();
+  assert.equal(await mobile.locator('#slots').textContent(),'0 / 1');
+  await mobile.locator('#campaign').tap();
+  assert.equal(await mobile.locator('#slots').textContent(),'0 / 3');
+  assert.equal(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await screenshot(desktop,'sort-desktop');
   await execute(desktop,solve(levels[0]));
   assert.match(await desktop.locator('#status').textContent(),/Оба заказа собраны/);
