@@ -50,7 +50,11 @@ function render(){
   });
   q('next').hidden=run.state!=='won';
   q('next').textContent=modeName!=='campaign'?'Ещё раз':index===levels.length-1?'К первому уровню':'Следующий уровень';
-  q('status').textContent=run.state==='stuck'?'Буфер полон, ни одна коробка не подходит. Начни накладную заново.':run.state==='won'?'Оба заказа собраны. Отложено в буфер: '+run.parks+'.':note||level.name+' · Выбери коробку и заказ. В буфер можно убрать только первую с ленты.';
+  const demand=lane=>names[level.orders[lane][run.heads[lane]]]?.toLowerCase()??'заказ уже собран';
+  const blockedText=modeName==='training'&&run.state==='stuck'
+    ? 'Буфер полон. На ленте: '+(names[front]?.toLowerCase()??'нет груза')+'. Убрать коробку некуда, а заказы ждут другое. Заказ А: '+demand(0)+'. Заказ Б: '+demand(1)+'.'
+    : 'Буфер полон, ни одна коробка не подходит. Начни накладную заново.';
+  q('status').textContent=run.state==='stuck'?blockedText:run.state==='won'?'Оба заказа собраны. Отложено в буфер: '+run.parks+'.':note||level.name+' · Выбери коробку и заказ. В буфер можно убрать только первую с ленты.';
 }
 function apply(kind,lane){
   const a=actions(level,run).find(v=>v.kind===kind&&(kind==='park'||v.lane===lane&&v.from===selected.from&&(selected.from==='front'||v.type===selected.type)));
