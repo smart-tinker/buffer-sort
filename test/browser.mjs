@@ -52,11 +52,13 @@ async function checkSort(desktop,mobile){
   assert.equal(await desktop.locator('#training').getAttribute('aria-pressed'),'true');
   assert.equal(await desktop.locator('#slots').textContent(),'0 / 1');
   await desktop.locator('#send1').click();
+  assert.doesNotMatch(await desktop.locator('#status').textContent(),/Буфер полон/);
   await desktop.locator('#park').click();
-  assert.match(await desktop.locator('#status').textContent(),/Буфер полон/);
+  assert.equal(await desktop.locator('#status').textContent(),'Буфер полон. На ленте: круг. Убрать коробку некуда, а заказы ждут другое. Заказ А: квадрат. Заказ Б: треугольник.');
   assert.equal(await desktop.locator('#slots').textContent(),'1 / 1');
   await desktop.locator('#reset').click();
   assert.equal(await desktop.locator('#slots').textContent(),'0 / 1');
+  assert.doesNotMatch(await desktop.locator('#status').textContent(),/Буфер полон/);
   const start=newRun(training);
   const first=actions(training,start).find(a=>a.from==='front'&&a.lane===0);
   await execute(desktop,[first,...solve(training,step(training,start,first))]);
