@@ -1,6 +1,6 @@
-import {CAP,levels,newRun,waiting,buffered,actions,step,dailyLevel} from './model.mjs';
+import {capacity,training,levels,newRun,waiting,buffered,actions,step,dailyLevel} from './model.mjs';
 const q=id=>document.getElementById(id), symbols={A:'■',B:'●',C:'▲'}, names={A:'Квадрат',B:'Круг',C:'Треугольник'};
-let index=0,isDaily=false,level=levels[0],run=newRun(level),selected={from:'front'},note='';
+let index=0,modeName='campaign',level=levels[0],run=newRun(level),selected={from:'front'},note='';
 const stageKey='buffer-sort.stage.v1', recordKey='buffer-sort.daily.v1';
 try{const n=Number(localStorage.getItem(stageKey));if(Number.isInteger(n)&&n>=0&&n<levels.length)index=n}catch{}
 level=levels[index];run=newRun(level);
@@ -15,13 +15,14 @@ function currentRecord(){
   return null;
 }
 function remember(){
-  if(!isDaily)return;
+  if(modeName!=='daily')return;
   const best=currentRecord();
   if(best===null||run.parks<best){try{localStorage.setItem(recordKey,JSON.stringify({date:level.day,parks:run.parks}))}catch{}}
 }
 function render(){
-  q('stage').textContent=isDaily?level.day+' UTC':String(index+1).padStart(2,'0')+' / 06';
-  q('campaign').setAttribute('aria-pressed',String(!isDaily));q('daily').setAttribute('aria-pressed',String(isDaily));
+  const isDaily=modeName==='daily',limit=capacity(level);
+  q('stage').textContent=isDaily?level.day+' UTC':modeName==='training'?'ОБУЧЕНИЕ':String(index+1).padStart(2,'0')+' / 06';
+  for(const mode of ['campaign','daily','training'])q(mode).setAttribute('aria-pressed',String(modeName===mode));
   const best=isDaily?currentRecord():null;
   q('record').hidden=!isDaily;q('record').textContent=best===null?'Лучший результат: пока нет':'Лучший результат: '+best+' в буфер';
   const valid=actions(level,run), front=waiting(level,run);
@@ -36,8 +37,8 @@ function render(){
     button.disabled=run.state!=='play';button.append(chip(type));
     button.onclick=()=>{choose('buffer',type);q('buffer').querySelector('button[data-pick="'+type+'"]')?.focus()};return button;
   });
-  while(items.length<CAP){const p=document.createElement('div');p.className='empty';p.setAttribute('aria-hidden','true');items.push(p)}
-  q('buffer').replaceChildren(...items);q('slots').textContent=buffer.length+' / '+CAP;
+  while(items.length<limit){const p=document.createElement('div');p.className='empty';p.setAttribute('aria-hidden','true');items.push(p)}
+  q('buffer').replaceChildren(...items);q('slots').textContent=buffer.length+' / '+limit;
   q('park').disabled=!valid.some(a=>a.kind==='park');
   level.orders.forEach((order,lane)=>{
     q('queue'+lane).replaceChildren(...order.map((type,i)=>{
@@ -48,7 +49,7 @@ function render(){
     q('send'+lane).disabled=!valid.some(a=>a.kind==='send'&&a.lane===lane&&a.from===selected.from&&(selected.from==='front'||a.type===selected.type));
   });
   q('next').hidden=run.state!=='won';
-  q('next').textContent=isDaily?'Ещё раз':index===levels.length-1?'К первому уровню':'Следующий уровень';
+  q('next').textContent=modeName!=='campaign'?'Ещё раз':index===levels.length-1?'К первому уровню':'Следующий уровень';
   q('status').textContent=run.state==='stuck'?'Буфер полон, ни одна коробка не подходит. Начни накладную заново.':run.state==='won'?'Оба заказа собраны. Отложено в буфер: '+run.parks+'.':note||level.name+' · Выбери коробку и заказ. В буфер можно убрать только первую с ленты.';
 }
 function apply(kind,lane){
@@ -61,12 +62,12 @@ function apply(kind,lane){
   render();
 }
 function restart(){run=newRun(level);selected={from:'front'};note='';render()}
-function mode(daily){if(isDaily===daily)return;isDaily=daily;level=daily?dailyLevel(new Date()):levels[index];restart()}
+function mode(name){if(modeName===name)return;modeName=name;level=name==='training'?training:name==='daily'?dailyLevel(new Date()):levels[index];restart()}
 q('front').onclick=()=>choose('front');
 q('park').onclick=()=>apply('park');
 q('send0').onclick=()=>apply('send',0);
 q('send1').onclick=()=>apply('send',1);
-q('campaign').onclick=()=>mode(false);q('daily').onclick=()=>mode(true);
+for(const name of ['campaign','daily','training'])q(name).onclick=()=>mode(name);
 q('reset').onclick=restart;
-q('next').onclick=()=>{if(!isDaily){index=(index+1)%levels.length;level=levels[index];try{localStorage.setItem(stageKey,String(index))}catch{}}restart()};
+q('next').onclick=()=>{if(modeName==='campaign'){index=(index+1)%levels.length;level=levels[index];try{localStorage.setItem(stageKey,String(index))}catch{}}restart()};
 render();

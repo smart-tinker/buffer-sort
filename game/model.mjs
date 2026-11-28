@@ -9,6 +9,8 @@ const layout=[
 ];
 export const make=(name,feed,one,two)=>({name,feed:[...feed],orders:[[...one],[...two]]});
 export const levels=layout.map(v=>make(...v));
+export const training={...make('Учебная накладная','ABBCA','ABB','AC'),capacity:1};
+export const capacity=level=>level.capacity??CAP;
 export function newRun(level){return {index:0,counts:[0,0,0],heads:[0,0],parks:0,state:'play'}}
 const wanted=(level,r,lane)=>level.orders[lane][r.heads[lane]];
 export const waiting=(level,r)=>level.feed[r.index];
@@ -23,7 +25,7 @@ export function actions(level,r){
     if(w===front)result.push({kind:'send',from:'front',lane,type:w});
     if(r.counts[TYPES.indexOf(w)]>0)result.push({kind:'send',from:'buffer',lane,type:w});
   }
-  if(front&&r.counts.reduce((a,b)=>a+b,0)<CAP)result.push({kind:'park',type:front});
+  if(front&&r.counts.reduce((a,b)=>a+b,0)<capacity(level))result.push({kind:'park',type:front});
   return result;
 }
 export function step(level,r,a){
